@@ -57,7 +57,7 @@ metadata:
   name: nsx-demo-ingress
 spec:
   rules:
-  - host: nsx.demo.corp.local
+  - host: nsx.demo.yves.local
     http:
       paths:
       - path: /
