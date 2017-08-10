@@ -1,0 +1,89 @@
+---
+# Web Frontend Deployment Spec
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: yelb-ui
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: yelb-ui
+        tier: frontend
+        # Note the secgroup Label, it will be used to match firewall in the ruleset
+        secgroup: web-tier
+    spec:
+      containers:
+      - name: yelb-ui
+        image: mreferre/yelb-ui
+        ports:
+        - containerPort: 80
+---
+# App middleware Deployment Spec
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: yelb-appserver
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: yelb-appserver
+        tier: middletier
+        # Note the secgroup Label, it will be used to match firewall in the ruleset
+        secgroup: app-tier
+    spec:
+      containers:
+      - name: yelb-appserver
+        image: yfauser/yelb-appserver
+        ports:
+        - containerPort: 4567
+---
+# K8s App Server Svc
+apiVersion: v1
+kind: Service
+metadata:
+  name: yelb-appserver
+  labels:
+    app: yelb-appserver
+    tier: middletier
+spec:
+  type: ClusterIP
+  ports:
+  - port: 4567
+  selector:
+    app: yelb-appserver
+    tier: middletier
+---
+# K8s Web Frontend Svc
+apiVersion: v1
+kind: Service
+metadata:
+  name: yelb-ui
+  labels:
+    app: yelb-ui
+    tier: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+  selector:
+    app: yelb-ui
+    tier: frontend
+---
+# Inress Rule for N/S Load-Balancing
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: yelb-ui-ingress
+spec:
+  rules:
+    - host: yelb.demo.yves.local
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: yelb-ui
+              servicePort: 80
