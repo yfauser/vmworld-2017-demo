@@ -1,0 +1,66 @@
+# This creates the Replication Controller for the Web-Server
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nsx-demo-rc
+  labels:
+    app: nsx-demo
+spec:
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: nsx-demo
+        secgroup: web-tier
+    spec:
+      containers:
+      - name: nsx-demo
+        image: yfauser/nsx-demo
+        ports:
+        - containerPort: 80
+---
+# This creates a 'jumhost' Pod to test the K8s Service
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mgmtpod
+spec:
+  containers:
+  - name: ubuntu
+    image: tutum/ubuntu:trusty
+    imagePullPolicy: IfNotPresent
+    ports:
+    - name: ssh
+      containerPort: 22
+    env:
+    - name: ROOT_PASS
+      value: VMware1!
+---
+# This creates the K8s Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nsx-demo
+  labels:
+    app: nsx-demo
+spec:
+  ports:
+    # the port that this service should serve on
+    - port: 80
+  selector:
+    app: nsx-demo
+---
+# This creates the K8s Ingress Controller
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nsx-demo-ingress
+spec:
+  rules:
+  - host: nsx.demo.corp.local
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nsx-demo
+          servicePort: 80
