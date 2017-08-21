@@ -79,11 +79,7 @@ kind: Route
 metadata:
   name: yelb-ui-route
 spec:
-  rules:
-    - host: yelb.apps.yves.local
-      http:
-        paths:
-          - path: /
-            backend:
-              serviceName: yelb-ui
-              servicePort: 80
+  host: yelb.apps.yves.local
+  to:
+    kind: Service
+    name: yelb-ui
