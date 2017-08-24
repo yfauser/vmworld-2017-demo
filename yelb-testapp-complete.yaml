@@ -1,0 +1,134 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+   name: yelb-app
+---
+# Web Frontend Deployment Spec
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: yelb-ui
+  namespace: yelb-app
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: yelb-ui
+        tier: frontend
+        # Note the secgroup Label, it will be used to match firewall in the ruleset
+        secgroup: web-tier
+    spec:
+      containers:
+      - name: yelb-ui
+        image: mreferre/yelb-ui
+        ports:
+        - containerPort: 80
+---
+# App middleware Deployment Spec
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: yelb-appserver
+  namespace: yelb-app
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: yelb-appserver
+        tier: middletier
+        # Note the secgroup Label, it will be used to match firewall in the ruleset
+        secgroup: app-tier
+    spec:
+      containers:
+      - name: yelb-appserver
+        image: mreferre/yelb-appserver
+        ports:
+        - containerPort: 4567
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: redis-server
+  namespace: yelb-app
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis-server
+        tier: backend
+    spec:
+      containers:
+      - name: redis-server
+        image: redis
+        ports:
+        - containerPort: 6379
+---
+# K8s App Server Svc
+apiVersion: v1
+kind: Service
+metadata:
+  name: yelb-appserver
+  namespace: yelb-app
+  labels:
+    app: yelb-appserver
+    tier: middletier
+spec:
+  type: ClusterIP
+  ports:
+  - port: 4567
+  selector:
+    app: yelb-appserver
+    tier: middletier
+---
+# K8s Web Frontend Svc
+apiVersion: v1
+kind: Service
+metadata:
+  name: yelb-ui
+  namespace: yelb-app
+  labels:
+    app: yelb-ui
+    tier: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+  selector:
+    app: yelb-ui
+    tier: frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-server
+  namespace: yelb-app
+  labels:
+    app: redis-server
+    tier: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+  selector:
+    app: redis-server
+    tier: backend
+---
+# Inress Rule for N/S Load-Balancing
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: yelb-ui-ingress
+  namespace: yelb-app
+spec:
+  rules:
+    - host: yelb.demo.corp.local
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: yelb-ui
+              servicePort: 80
